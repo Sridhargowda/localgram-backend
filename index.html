@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Gram - Admin Control Center</title>
+    <style>
+        body {
+            background-color: #000000;
+            color: #FFD700;
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1, h2 {
+            text-shadow: 0 0 5px #FFD700;
+        }
+        .container {
+            border: 2px solid #FFD700;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            background-color: #111111;
+        }
+        input, button {
+            padding: 10px;
+            margin: 5px;
+            background-color: #222222;
+            color: #FFD700;
+            border: 1px solid #FFD700;
+            border-radius: 5px;
+        }
+        button {
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #FFD700;
+            color: #000000;
+        }
+        .user-card, .post-card {
+            border: 1px solid #333333;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            background-color: #1a1a1a;
+        }
+        .ban-btn {
+            background-color: #ff4444;
+            color: #ffffff;
+            border: none;
+        }
+        .delete-btn {
+            background-color: #cc0000;
+            color: #ffffff;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>⚡ Local Gram Admin Dashboard</h1>
+
+    <!-- 1. Test User Signup -->
+    <div class="container">
+        <h2>1. Create Test User</h2>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <input type="text" id="phone" placeholder="Phone Number">
+        <button onclick="registerUser()">Register User</button>
+    </div>
+
+    <!-- 2. Test User Post -->
+    <div class="container">
+        <h2>2. Create Test Post</h2>
+        <input type="text" id="postUser" placeholder="Username">
+        <input type="text" id="caption" placeholder="Caption">
+        <button onclick="createPost()">Publish Post</button>
+    </div>
+
+    <!-- 3. Admin Control Panel -->
+    <div class="container">
+        <h2>3. User Management & Ban Control</h2>
+        <button onclick="loadUsers()">Refresh Users List</button>
+        <div id="usersList"></div>
+    </div>
+
+    <div class="container">
+        <h2>4. Live Feed & Post Moderation</h2>
+        <button onclick="loadPosts()">Refresh Feed</button>
+        <div id="postsList"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+
+        async function registerUser() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const phone = document.getElementById('phone').value;
+
+            const res = await fetch(`${API_URL}/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, phone })
+            });
+            const data = await res.json();
+            alert(data.message || data.error);
+            loadUsers();
+        }
+
+        async function createPost() {
+            const username = document.getElementById('postUser').value;
+            const caption = document.getElementById('caption').value;
+
+            const res = await fetch(`${API_URL}/posts`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, caption })
+            });
+            const data = await res.json();
+            alert(data.message || data.error);
+            loadPosts();
+        }
+
+        async function loadUsers() {
+            const res = await fetch(`${API_URL}/admin/users`);
+            const users = await res.json();
+            const list = document.getElementById('usersList');
+            list.innerHTML = '';
+
+            users.forEach(u => {
+                list.innerHTML += `
+                    <div class="user-card">
+                        <strong>User:</strong> ${u.username} | <strong>Phone:</strong> ${u.phone} | <strong>Banned:</strong> ${u.isBanned}
+                        <button class="ban-btn" onclick="toggleBan('${u.username}')">${u.isBanned ? 'Unban' : 'Ban User'}</button>
+                    </div>
+                `;
+            });
+        }
+
+        async function toggleBan(username) {
+            const res = await fetch(`${API_URL}/admin/ban-user`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username })
+            });
+            const data = await res.json();
+            alert(data.message);
+            loadUsers();
+        }
+
+        async function loadPosts() {
+            const res = await fetch(`${API_URL}/posts`);
+            const posts = await res.json();
+            const list = document.getElementById('postsList');
+            list.innerHTML = '';
+
+            posts.forEach(p => {
+                list.innerHTML += `
+                    <div class="post-card">
+                        <strong>@${p.username}:</strong> ${p.caption}
+                        <button class="delete-btn" onclick="deletePost(${p.id})">Delete Post</button>
+                    </div>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>

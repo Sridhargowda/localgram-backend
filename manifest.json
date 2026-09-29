@@ -1,0 +1,16 @@
+{
+  "short_name": "LocalGram",
+  "name": "Local Gram Social",
+  "icons": [
+    {
+      "src": "logo.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/app.html",
+  "background_color": "#0d0d0d",
+  "theme_color": "#FFD700",
+  "display": "standalone"
+}

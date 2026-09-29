@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<hea<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
+<meta name="theme-color" content="#FFD700">d>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Gram</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: #0d0d0d;
+            color: #FFD700;
+            font-family: Arial, sans-serif;
+            max-width: 480px;
+            margin: 0 auto;
+            border-left: 1px solid #222;
+            border-right: 1px solid #222;
+            min-height: 100vh;
+            padding-bottom: 70px;
+        }
+        header {
+            background-color: #111;
+            padding: 15px;
+            text-align: center;
+            border-bottom: 2px solid #FFD700;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .box {
+            background-color: #161616;
+            margin: 15px;
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #FFD700;
+        }
+        input, textarea, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 8px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background-color: #222;
+            color: #FFD700;
+        }
+        button {
+            background-color: #FFD700;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+        }
+        .card {
+            background-color: #161616;
+            margin: 15px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            overflow: hidden;
+        }
+        .post-header {
+            padding: 10px;
+            font-weight: bold;
+            color: #fff;
+        }
+        .post-img {
+            width: 100%;
+            max-height: 350px;
+            object-fit: cover;
+        }
+        .post-actions {
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        .action-btn {
+            width: auto;
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        .comments-section {
+            padding: 10px;
+            background-color: #111;
+            border-top: 1px solid #222;
+            font-size: 13px;
+        }
+        .comment-item {
+            margin-bottom: 5px;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>⚡ Local Gram</h1>
+    </header>
+
+    <!-- Search User Box -->
+    <div class="box">
+        <h3>🔍 Search Users</h3>
+        <input type="text" id="searchQuery" placeholder="Search by username..." onkeyup="searchUsers()">
+        <div id="searchResults" style="margin-top: 5px;"></div>
+    </div>
+
+    <!-- Create Post Box with File Upload -->
+    <div class="box">
+        <h3>📸 Create New Post</h3>
+        <input type="text" id="postUser" placeholder="Your Username">
+        <input type="file" id="postFile" accept="image/*">
+        <textarea id="postCaption" placeholder="Write a caption..."></textarea>
+        <button onclick="publishPost()">Upload & Post</button>
+    </div>
+
+    <!-- Feed -->
+    <div id="feed"></div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+
+        async function loadFeed() {
+            const res = await fetch(`${API_URL}/posts`);
+            const posts = await res.json();
+            const feed = document.getElementById('feed');
+            feed.innerHTML = '';
+
+            posts.forEach(p => {
+                const imgTag = p.imageUrl ? `<img src="${p.imageUrl}" class="post-img">` : '';
+                const likesCount = p.likes ? p.likes.length : 0;
+                
+                let commentsHtml = '';
+                if(p.comments) {
+                    p.comments.forEach(c => {
+                        commentsHtml += `<div class="comment-item"><strong>@${c.username}:</strong> ${c.text}</div>`;
+                    });
+                }
+
+                feed.innerHTML += `
+                    <div class="card">
+                        <div class="post-header">@${p.username}</div>
+                        ${imgTag}
+                        <div style="padding: 10px; color: #ddd;">${p.caption || ''}</div>
+                        <div class="post-actions">
+                            <button class="action-btn" onclick="likePost('${p._id}')">❤️ Like (${likesCount})</button>
+                        </div>
+                        <div class="comments-section">
+                            <div id="comments-${p._id}">${commentsHtml}</div>
+                            <input type="text" id="input-comment-${p._id}" placeholder="Add a comment..." style="width: 70%;">
+                            <button class="action-btn" style="width: 25%;" onclick="addComment('${p._id}')">Send</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        async function publishPost() {
+            const username = document.getElementById('postUser').value;
+            const caption = document.getElementById('postCaption').value;
+            const fileInput = document.getElementById('postFile');
+
+            if(!username) return alert('Username is required');
+
+            const formData = new FormData();
+            formData.append('username', username);
+            formData.append('caption', caption);
+            if(fileInput.files[0]) {
+                formData.append('image', fileInput.files[0]);
+            }
+
+            const res = await fetch(`${API_URL}/posts`, {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            alert(data.message || data.error);
+            document.getElementById('postCaption').value = '';
+            document.getElementById('postFile').value = '';
+            loadFeed();
+        }
+
+        async function likePost(id) {
+            const username = document.getElementById('postUser').value || 'Guest';
+            await fetch(`${API_URL}/posts/${id}/like`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username })
+            });
+            loadFeed();
+        }
+
+        async function addComment(id) {
+            const username = document.getElementById('postUser').value || 'Guest';
+            const text = document.getElementById(`input-comment-${id}`).value;
+            if(!text) return;
+
+            await fetch(`${API_URL}/posts/${id}/comment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, text })
+            });
+            loadFeed();
+        }
+
+        async function searchUsers() {
+            const q = document.getElementById('searchQuery').value;
+            if(!q) { document.getElementById('searchResults').innerHTML = ''; return; }
+            const res = await fetch(`${API_URL}/users/search?q=${q}`);
+            const users = await res.json();
+            const resDiv = document.getElementById('searchResults');
+            resDiv.innerHTML = users.map(u => `<div style="color:#fff; padding:3px;">👤 @${u.username}</div>`).join('');
+        }
+
+        loadFeed();
+    </script>
+</body>
+</html>
